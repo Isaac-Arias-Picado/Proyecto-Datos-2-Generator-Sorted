@@ -18,7 +18,9 @@ int main(int argc, char* argv[]) {
 
     if (!sizeParam.empty()) {
         if (outputPath.empty()) outputPath = "datos_generados.bin";
-
+        if (outputPath.find(".bin") == string::npos) {
+            outputPath += ".bin";
+        }
         Generator gen;
 		ofstream out(outputPath, ios::binary); //abre output en modo binario
         if (out.is_open()) {

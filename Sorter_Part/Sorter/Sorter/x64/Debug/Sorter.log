@@ -3,8 +3,5 @@ C:\Users\Isaac\P1_Datos_II\Sorter_Part\Sorter\Sorter\Scripts\PagedArray.cpp(187,
   main.cpp
 C:\Users\Isaac\P1_Datos_II\Sorter_Part\Sorter\Sorter\main.cpp(64,30): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
   Sorter.cpp
-  Generating code
-  Previous IPDB not found, fall back to full compilation.
-  All 292 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
-  Finished generating code
-  Sorter.vcxproj -> C:\Users\Isaac\P1_Datos_II\Sorter_Part\Sorter\x64\Release\Sorter.exe
+  Generating Code...
+  Sorter.vcxproj -> C:\Users\Isaac\P1_Datos_II\Sorter_Part\Sorter\x64\Debug\Sorter.exe

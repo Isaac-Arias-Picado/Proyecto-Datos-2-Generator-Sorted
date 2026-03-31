@@ -23,10 +23,10 @@ public:
                 cantidad = (1024LL * 1024 * 1024) / sizeof(int);
 
             else {
-                cout << "Tamaño no reconocido, Usando SMALL por defecto" << endl;
+                cout << "Tamano no reconocido, Usando SMALL por defecto" << endl;
             }
 
-            cout << "Generando " << cantidad << " enteros para el tamaño " << size << "..." << endl;
+            cout << "Generando " << cantidad << " enteros para el tamano " << size << "..." << endl;
 
             for (long long i = 0; i < cantidad; i++) {
                 int num = dis(gen);

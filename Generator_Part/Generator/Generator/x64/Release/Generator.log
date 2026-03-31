@@ -2,6 +2,6 @@
   Generator.cpp
   Generating code
   Previous IPDB not found, fall back to full compilation.
-  All 213 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  All 223 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Generator.vcxproj -> C:\Users\Isaac\P1_Datos_II\Generator_Part\Generator\x64\Release\Generator.exe

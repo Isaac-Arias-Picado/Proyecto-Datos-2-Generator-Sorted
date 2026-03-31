@@ -10,7 +10,6 @@
 #include "Interfaces/Sorter.h"
 #include "Interfaces/PagedArray.h"
 
-
 using namespace std;
 using namespace std::chrono;
 
@@ -44,8 +43,7 @@ bool copiarArchivo(const string& src, const string& dst) {
     return exito;
 }
 
-bool generarArchivoTXT(PagedArray& arr, const string& outputPath, long long totalEnteros) {
-    string txtPath = outputPath + ".txt";
+bool generarArchivoTXT(PagedArray& arr, const string& txtPath, long long totalEnteros) {
     ofstream outTxt(txtPath);
 
     if (!outTxt.is_open()) {
@@ -57,7 +55,7 @@ bool generarArchivoTXT(PagedArray& arr, const string& outputPath, long long tota
 
     const int BUFFER_SIZE = 10000;
     string buffer;
-    buffer.reserve(BUFFER_SIZE * 12); 
+    buffer.reserve(BUFFER_SIZE * 12);
 
     long long progresoTXT = 0;
     auto inicioTXT = steady_clock::now();
@@ -100,8 +98,8 @@ int main(int argc, char* argv[]) {
     string inputPath = "";
     string outputPath = "";
     string algoritmo = "QS";
-    int tamanoPagina = 16384;      
-    int cantidadPaginas = 512;            
+    int tamanoPagina = 16384;
+    int cantidadPaginas = 512;
     auto inicio_total = steady_clock::now();
 
     for (int i = 1; i < argc; i++) {
@@ -154,16 +152,24 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    string nombreBase = outputPath;
+    // Eliminar extensión .bin si existe
+    if (nombreBase.size() >= 4 && nombreBase.substr(nombreBase.size() - 4) == ".bin") {
+        nombreBase = nombreBase.substr(0, nombreBase.size() - 4);
+    }
+    string binPath = nombreBase + ".bin";
+    string txtPath = nombreBase + ".txt";
+
     // Obtener tamaño del archivo
     long long totalBytes = 0;
     long long totalEnterosLL = 0;
     {
-		ifstream in(inputPath, ios::binary | ios::ate); //abre el archivo y se posiciona al final para obtener su tamaño
+        ifstream in(inputPath, ios::binary | ios::ate);
         if (!in.is_open()) {
             cerr << "Error: No se pudo abrir " << inputPath << endl;
             return 1;
         }
-		totalBytes = in.tellg(); // tellg() devuelve la posición actual del cursor, que al estar al final es igual al tamaño del archivo
+        totalBytes = in.tellg();
         if (totalBytes == 0) {
             cerr << "Error: El archivo de entrada esta vacio" << endl;
             return 1;
@@ -179,25 +185,26 @@ int main(int argc, char* argv[]) {
 
     int totalEnteros = static_cast<int>(totalEnterosLL);
 
-    // Mostrar configuración
+    // Mostrar configuración 
     std::cout << "\n==========================================" << endl;
     std::cout << "   PAGED ARRAY SORTER" << endl;
     std::cout << "==========================================" << endl;
     std::cout << "Input: " << inputPath << endl;
-    std::cout << "Output: " << outputPath << " (binario ordenado)" << endl;
+    std::cout << "Output binario: " << binPath << endl;
+    std::cout << "Output TXT   : " << txtPath << endl;
     std::cout << "Algoritmo: " << algoritmo << endl;
     std::cout << "pageSize: " << tamanoPagina << " bytes ("
         << (tamanoPagina / 1024) << "KB)" << endl;
     std::cout << "pageCount: " << cantidadPaginas << " paginas" << endl;
-    std::cout << "Caché total: " << (tamanoPagina * cantidadPaginas) / (1024 * 1024)
+    std::cout << "Cache total: " << (tamanoPagina * cantidadPaginas) / (1024 * 1024)
         << " MB" << endl;
     std::cout << "Archivo: " << totalEnteros << " enteros ("
         << (totalBytes / (1024 * 1024)) << " MB)" << endl;
     std::cout << "==========================================\n" << endl;
 
-    // PASO 1: Copiar archivo original a la ubicación de salida
-    std::cout << "PASO 1: Copiando " << inputPath << " -> " << outputPath << " ..." << endl;
-    if (!copiarArchivo(inputPath, outputPath)) {
+    // PASO 1: Copiar archivo original a la ubicación de salida (binario)
+    std::cout << "PASO 1: Copiando " << inputPath << " -> " << binPath << " ..." << endl;
+    if (!copiarArchivo(inputPath, binPath)) {
         cerr << "Error: No se pudo copiar el archivo" << endl;
         return 1;
     }
@@ -206,7 +213,7 @@ int main(int argc, char* argv[]) {
     // PASO 2: Ordenar el archivo
     std::cout << "\nPASO 2: Ordenando archivo..." << endl;
 
-    PagedArray arr(outputPath, tamanoPagina, cantidadPaginas);
+    PagedArray arr(binPath, tamanoPagina, cantidadPaginas);
     Sorter sorter;
 
     auto inicio_algoritmo = steady_clock::now();
@@ -244,18 +251,19 @@ int main(int argc, char* argv[]) {
     long long faults = arr.getPageFaults();
     long long totalAccesos = hits + faults;
 
-    // PASO 4: Generar archivo TXT legible 
-    generarArchivoTXT(arr, outputPath, totalEnterosLL);
+    // PASO 4: Generar archivo TXT legible (usando txtPath)
+    generarArchivoTXT(arr, txtPath, totalEnterosLL);
 
     auto fin_total = steady_clock::now();
     double tiempoReal = duration<double>(fin_total - inicio_total).count();
+
     // Mostrar resultados del ordenamiento
     std::cout << "\n======================================================" << endl;
     std::cout << "  ORDENAMIENTO COMPLETADO" << endl;
     std::cout << "  Algoritmo        : " << algoritmo << endl;
     std::cout << "  Configuración    : pageSize=" << tamanoPagina << ", pageCount=" << cantidadPaginas << endl;
-    std::cout << "  Tiempo      : " << fixed << setprecision(2) << tiempoReal << " segundos" << endl;
-    std::cout << "  Tiempo de ordenamiento     : " << fixed << setprecision(2) << tiempoalgoritmo << " segundos" << endl;
+    std::cout << "  Tiempo total     : " << fixed << setprecision(2) << tiempoReal << " segundos" << endl;
+    std::cout << "  Tiempo ordenamiento: " << fixed << setprecision(2) << tiempoalgoritmo << " segundos" << endl;
     std::cout << "  Page Hits        : " << hits << endl;
     std::cout << "  Page Faults      : " << faults << endl;
     std::cout << "======================================================" << endl;
