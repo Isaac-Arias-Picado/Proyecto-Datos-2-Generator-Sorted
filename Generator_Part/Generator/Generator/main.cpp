@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include "Scripts/Generator.cpp"
+#include <chrono>
 
 using namespace std;
 
@@ -15,17 +16,19 @@ int main(int argc, char* argv[]) {
         else if (arg == "-output" && i + 1 < argc) outputPath = argv[++i];
     }
 
-    // === MODO GENERADOR ===
     if (!sizeParam.empty()) {
         if (outputPath.empty()) outputPath = "datos_generados.bin";
 
         Generator gen;
-        ofstream out(outputPath, ios::binary);
+		ofstream out(outputPath, ios::binary); //abre output en modo binario
         if (out.is_open()) {
+            auto inicio = std::chrono::high_resolution_clock::now(); //cronometra el inicio
             cout << "Generando archivo: " << outputPath << " (Tamano: " << sizeParam << ")" << endl;
             gen.agregar_num_archivo(out, sizeParam);
             out.close();
-            cout << "Generacion completada" << endl;
+			auto fin = std::chrono::high_resolution_clock::now(); //cronometra el fin
+            auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
+            cout << "Generacion completada" << duracion.count() << endl;
         }
         else {
             cout << "Error: No se pudo crear el archivo " << outputPath << endl;
