@@ -1,16 +1,14 @@
 #pragma once
 #include <string>
 #include <fstream>
-#include <atomic>  
-
-using namespace std;
+#include <atomic>
 
 struct Page {
     int* data = nullptr;
-    int pageNumber = -1;
-    bool loaded = false;
-    bool modified = false;
-	long long loadOrder = 0; // Para implementar FIFO
+    int       pageNumber = -1;
+    bool      loaded = false;
+    bool      modified = false;
+    long long loadOrder = 0;
 };
 
 class PagedArray {
@@ -18,26 +16,26 @@ public:
     PagedArray(const std::string& fname, int pageSize, int pageCount);
     ~PagedArray();
 
-    // Acceso lectura/escritura
     int& operator[](int index);
     int  read(int index);
-
     void flush();
+
     long long getPageFaults() const;
     long long getPageHits()   const;
-    long long size() const { return totalInts; }
+    long long size()          const { return totalInts; }
 
     int* getPagePtr(int index, int& pageStart, int& pageEnd);
-    int getIntsPerPage() const { return pageSize / (int)sizeof(int); }
+    int  getIntsPerPage() const { return intsPerPage; }
 
 private:
-    string filename;
-    fstream file;
-    int pageSize;
-    int pageCount;
+    std::string  filename;
+    std::fstream file;
+    int          pageSize;
+    int          pageCount;
+    int          intsPerPage;   // calculado una vez en constructor
 
-    atomic<long long> pageFaults;
-    atomic<long long> pageHits;
+    std::atomic<long long> pageFaults;
+    std::atomic<long long> pageHits;
 
     long long fileSizeBytes;
     long long totalInts;
@@ -45,14 +43,12 @@ private:
 
     Page* memoryPages;
     long long fifoCounter;
-
-    int* pageTableArray;  // Mapeo directo: página → slot
-    int pageTableSize;    // tamaño del array = totalPages
+    int* pageTableArray;
+    int       pageTableSize = 0;
 
     void loadPage(int pageNumber, int slot);
     void savePage(int slot);
-
-    int  findPage(int pageNumber);  
+    int  findPage(int pageNumber);
     int  getAvailableSlot();
     int  getSlot(int index, bool markModified);
 };
