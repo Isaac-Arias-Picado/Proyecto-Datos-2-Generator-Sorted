@@ -37,42 +37,28 @@ bool generarArchivoTXT(PagedArray& arr, const string& txtPath, long long totalEn
         return false;                           
     }
           // Inicia medición de tiempo de ejecución
-    const int BUF = 1 << 23;                     // Buffer de (8 MB)
+    const int BUF = 1 << 23;                     // Buffer de (16 MB)
     char* buf = new char[BUF + 32];              // +32 bytes extra por seguridad (para números grandes)
     int pos = 0;                              
     DWORD written;                               // Variable para almacenar bytes escritos (requerida por WriteFile)
 
     auto writeInt = [&](int val) {
-        if (val < 0) {
-            buf[pos++] = '-';                    // Añade signo negativo
-            val = -val;                          // Trabaja con valor absoluto
-        }
-
-        // Conversión manual de entero a string 
-        char tmp[12];                          
+        if (val < 0) { buf[pos++] = '-'; val = -val; }
+        char tmp[12];
         int len = 0;
-        do {
-            tmp[len++] = '0' + (val % 10);       // Extrae último dígito y lo convierte a char
-            val /= 10;                           // Elimina el último dígito
-        } while (val);                           // Repite hasta que no queden dígitos
-
-        // Invierte el orden 
-        for (int i = len - 1; i >= 0; i--)
-            buf[pos++] = tmp[i];
+        do { tmp[len++] = '0' + (val % 10); val /= 10; } while (val);
+        for (int i = len - 1; i >= 0; i--) buf[pos++] = tmp[i];
         };
 
     for (long long i = 0; i < totalEnteros; i++) {
-        writeInt(arr.read(i));                 
-
-        // Añade separador ", "
+        writeInt(arr.read(i));
         if (i < totalEnteros - 1) {
             buf[pos++] = ',';
             buf[pos++] = ' ';
         }
-
-        if (pos >= BUF) {                        // Buffer alcanzó su capacidad máxima
-            WriteFile(hFile, buf, (DWORD)pos, &written, NULL);  // Escribe todo el buffer al disco
-            pos = 0;                             // Reinicia la posición para reutilizar el buffer
+        if (pos >= BUF - 32) {
+            WriteFile(hFile, buf, (DWORD)pos, &written, NULL);
+            pos = 0;
         }
     }
 
@@ -80,17 +66,16 @@ bool generarArchivoTXT(PagedArray& arr, const string& txtPath, long long totalEn
     WriteFile(hFile, buf, (DWORD)pos, &written, NULL);  
     CloseHandle(hFile);                          
     delete[] buf;                                // Libera la memoria del buffer
-
-    cout << "\nArchivo TXT generado en " << fixed << setprecision(1);   
+ 
     return true;                                
 }
 
 int main(int argc, char* argv[]) {
     string inputPath;
     string outputPath;
-    string algoritmo = "QS";
-    int tamanoPagina = 4096;
-    int cantidadPaginas = 512;
+    string algoritmo = "";
+    int tamanoPagina = 0;
+    int cantidadPaginas = 0;
     auto inicio_total = steady_clock::now();
 
     for (int i = 1; i < argc; i++) {
@@ -102,7 +87,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "-pageCount" && i + 1 < argc) cantidadPaginas = stoi(argv[++i]);
     }
 
-    tamanoPagina = tamanoPagina * sizeof(int);
+    tamanoPagina = tamanoPagina * (int)sizeof(int);
 
     if (inputPath.empty()) {
         cerr << "Error: falta argumento -input" << endl; return 1;

@@ -31,6 +31,12 @@
 
 using namespace std;
 
+static int log2i(int n) { //busca cual es el 2^s mas cercano a n
+    int s = 0;
+	while (n > 1) { s++; n >>= 1; } // es una division entera pero mas eficiente que n = n/2
+    return s;
+}
+
 PagedArray::PagedArray(const std::string& fname, int pSize, int pCount)
     : filename(fname), pageSize(pSize), pageCount(pCount),
     pageFaults(0), pageHits(0), fileSizeBytes(0), totalInts(0),
@@ -59,6 +65,15 @@ PagedArray::PagedArray(const std::string& fname, int pSize, int pCount)
     totalInts = fileSizeBytes / sizeof(int);
     totalPages = (fileSizeBytes + pageSize - 1) / pageSize;
     pageTableSize = (int)totalPages;
+	//los siguientes cambios optimizan al usar calculos de bits en lugar de division y modulo, pero solo si intsPerPage es potencia de 2
+	if ((intsPerPage & (intsPerPage - 1)) == 0) { //verifica si intsPerPage es potencia de 2 para optimizar calculos de pagina y offset
+        pageShift = log2i(intsPerPage); // calcula un pageshift para usar >> en lugar de /
+        pageMask = intsPerPage - 1;   // se usara como sustitucion de % 
+    }
+	else { //si no usa division y modulo normales
+        pageShift = -1; 
+        pageMask = 0;
+    }
 
 	pageTableArray = new int[pageTableSize]; //crea array de paginas, indice es numero de pagina, valor es slot en memoria o -1 si no esta cargada
     for (int i = 0; i < pageTableSize; i++)
@@ -83,39 +98,26 @@ PagedArray::~PagedArray() {
     delete[] pageTableArray;
 }
 
-int& PagedArray::operator[](int index) { //me devuelve una referencia al entero en la posicion index
-    int slot = getSlot(index, true);
-    int offset = index % intsPerPage;
-    return memoryPages[slot].data[offset]; 
-}
+int& PagedArray::operator[](int index) {
+    int pageNeeded = (pageShift >= 0) ? (index >> pageShift) : (index / intsPerPage);
+    int slot = pageTableArray[pageNeeded];
 
-int PagedArray::getSlot(int index, bool markModified) {
-    int pageNeeded = index / intsPerPage; //redondea hacia abajo
-	int slot = findPage(pageNeeded); //busca si la pagina ya esta cargada en memoria y devuelve su slot, o -1 si no esta cargada
-
-    if (slot != -1) {
-		pageHits.fetch_add(1, memory_order_relaxed); //si esta cargada, incrementa contador de page hits
-    }
-    else {
-		pageFaults.fetch_add(1, memory_order_relaxed); //si no esta cargada, incrementa contador de page faults
-		slot = getAvailableSlot(); //obtiene un slot disponible en memoria, o a reemplazar
-        loadPage(pageNeeded, slot); //carga la pagina
+    if (slot >= 0) {
+        // PAGE HIT
+        pageHits++;
+        memoryPages[slot].modified = true;
+        int offset = (pageShift >= 0) ? (index & pageMask) : (index % intsPerPage); // & funciona como el % pero para bytes
+        return memoryPages[slot].data[offset];
     }
 
-    if (markModified) memoryPages[slot].modified = true; //marca modificado dependiendo del parametro
-    return slot;
+    // PAGE FAULT
+    pageFaults++;
+    slot = getAvailableSlot();
+    loadPage(pageNeeded, slot);
+    memoryPages[slot].modified = true;
+    int offset = (pageShift >= 0) ? (index & pageMask) : (index % intsPerPage);
+    return memoryPages[slot].data[offset];
 }
-
-int PagedArray::findPage(int pageNumber) {
-    if (pageNumber < 0 || pageNumber >= pageTableSize) return -1;
-    int slot = pageTableArray[pageNumber];
-    if (slot >= 0 && slot < pageCount &&memoryPages[slot].loaded &&
-        memoryPages[slot].pageNumber == pageNumber)
-        return slot;
-    if (slot >= 0) pageTableArray[pageNumber] = -1;
-    return -1;
-}
-
 
 void PagedArray::loadPage(int pageNumber, int slot) {
     long long pos = (long long)pageNumber * pageSize;
@@ -150,6 +152,7 @@ void PagedArray::savePage(int slot) {
 }
 
 int PagedArray::getAvailableSlot() {
+    // slot libre: solo ocurre durante el llenado inicial del caché
     for (int i = 0; i < pageCount; i++) {
         if (!memoryPages[i].loaded) {
             if (memoryPages[i].pageNumber >= 0)
@@ -158,30 +161,68 @@ int PagedArray::getAvailableSlot() {
         }
     }
 
+    // FIFO: desalojar la página con menor loadOrder (la más antigua)
     int oldest = 0;
     for (int i = 1; i < pageCount; i++)
         if (memoryPages[i].loadOrder < memoryPages[oldest].loadOrder)
             oldest = i;
 
     int oldPageNum = memoryPages[oldest].pageNumber;
-    if (oldPageNum >= 0) pageTableArray[oldPageNum] = -1;
+    if (oldPageNum >= 0) pageTableArray[oldPageNum] = -1; // invalida tabla primero
+
+    // invalida cache de read() si se evicta la página cacheada
+    if (oldest == lastReadSlot) {
+        lastReadPage = -1;
+        lastReadSlot = -1;
+    }
 
     savePage(oldest);
     memoryPages[oldest].loaded = false;
     return oldest;
 }
 
-int PagedArray::read(int index) { //hace lo mismo que operator[] pero sin marcar modificado
-    int slot = getSlot(index, false);
-    int offset = index % intsPerPage; 
+int PagedArray::read(int index) {
+    int pageNeeded = (pageShift >= 0) ? (index >> pageShift) : (index / intsPerPage);
+
+    // cache hit: misma página y sigue válida en memoria
+    if (pageNeeded == lastReadPage && pageTableArray[pageNeeded] == lastReadSlot) { //evita entrar en page table array
+        int offset = (pageShift >= 0) ? (index & pageMask) : (index % intsPerPage);
+        return memoryPages[lastReadSlot].data[offset];
+    }
+
+    // cache miss:
+    int slot = pageTableArray[pageNeeded];
+    if (slot >= 0) {
+        pageHits++;
+    }
+    else {
+        pageFaults++;
+        slot = getAvailableSlot();
+        loadPage(pageNeeded, slot);
+    }
+    lastReadPage = pageNeeded;
+    lastReadSlot = slot;
+    int offset = (pageShift >= 0) ? (index & pageMask) : (index % intsPerPage);
     return memoryPages[slot].data[offset];
 }
 
 int* PagedArray::getPagePtr(int index, int& pageStart, int& pageEnd) {
-    int slot = getSlot(index, true); //marca modificado
-    int pageNum = memoryPages[slot].pageNumber; 
+    int pageNeeded = (pageShift >= 0) ? (index >> pageShift) : (index / intsPerPage);
+    int slot = pageTableArray[pageNeeded];
+
+    if (slot < 0) {
+        pageFaults++;
+        slot = getAvailableSlot();
+        loadPage(pageNeeded, slot);
+    }
+    else {
+        pageHits++;
+    }
+    memoryPages[slot].modified = true;
+
+    int pageNum = memoryPages[slot].pageNumber;
     pageStart = pageNum * intsPerPage;
-	pageEnd = pageStart + intsPerPage - 1; //se resta 1 por que el indice es 0-based
+    pageEnd = pageStart + intsPerPage - 1;
     return memoryPages[slot].data;
 }
 
@@ -190,6 +231,3 @@ void PagedArray::flush() {
         savePage(i);
 	if (file.is_open()) file.flush(); //asegura que los datos se escriban en disco
 }
-
-long long PagedArray::getPageFaults() const { return pageFaults.load(memory_order_relaxed); }
-long long PagedArray::getPageHits()   const { return pageHits.load(memory_order_relaxed); }
