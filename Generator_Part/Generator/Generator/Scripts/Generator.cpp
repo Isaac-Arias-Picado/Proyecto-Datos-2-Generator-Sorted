@@ -12,7 +12,7 @@ public:
 			// Configuración para generar números aleatorios
             random_device rd;
             mt19937 gen(rd());
-            uniform_int_distribution<int> dis(0, numeric_limits<int>::max());
+            uniform_int_distribution<int> dis(numeric_limits<int>::min(), numeric_limits<int>::max());
 
 			long long cantidad = (256LL * 1024 * 1024) / sizeof(int); //Usa SMALL por defecto
             if (size == "SMALL")   // 256 MB
