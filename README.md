@@ -5,7 +5,7 @@ Autor: Isaac Arias Picado
 
 ## Requisitos
 - Windows 10/11 x64
-- Visual Studio 2022 con soporte C++17
+- Visual Studio 2026 con soporte C++17
 
 ## Compilación
 1. Abrir `Sorter.sln` en Visual Studio
