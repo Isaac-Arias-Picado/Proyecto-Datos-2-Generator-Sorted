@@ -27,7 +27,6 @@
 #include "../Interfaces/PagedArray.h"
 #include <iostream>
 #include <cstring>
-#include <algorithm>
 
 using namespace std;
 

@@ -1,14 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstring>
 #include <chrono>
-#include <iomanip>
 #include <sys/stat.h>
-#include <climits>
 #include "Interfaces/Sorter.h"
 #include "Interfaces/PagedArray.h"
-#include <windows.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -19,57 +15,61 @@ bool fileExists(const string& path) { // Verificar si el archivo existe usando, 
 }
 
 bool algoritmoCorrecto(const string& alg) { //verifica si el algoritmo es correcto
-    return alg == "QS" || alg == "SS" || alg == "TS" || alg == "MS" || alg == "RS";
+    return alg == "QS" || alg == "SS" || alg == "MS" || alg == "TS" || alg == "RS";
 }
 
-bool copiarArchivo(const string& src, const string& dst) { //copia el archivo usando la libraria de windows
-    return CopyFileA(src.c_str(), dst.c_str(), FALSE) != 0;
+bool copiarArchivo(const string& src, const string& dst) {
+    ifstream in(src, ios::binary);
+    ofstream out(dst, ios::binary);
+    if (!in.is_open() || !out.is_open()) return false;
+
+    const int BUF = 1 << 20;
+    char* buf = new char[BUF];
+    bool exito = true;
+
+    while (in.read(buf, BUF) || in.gcount() > 0) {
+        out.write(buf, in.gcount());
+        if (!out.good()) {
+            exito = false;
+            break;
+        }
+    }
+
+    delete[] buf;
+    return exito;
 }
 
 bool generarArchivoTXT(PagedArray& arr, const string& txtPath, long long totalEnteros) {
+    ofstream outTxt(txtPath);
 
-    HANDLE hFile = CreateFileA(txtPath.c_str(), GENERIC_WRITE, 0, NULL,
-        CREATE_ALWAYS,                           // Sobrescribe si ya existe
-        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,  // Optimización para escritura secuencial
-        NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        cerr << "Error: No se pudo crear " << txtPath << endl;
-        return false;                           
+    if (!outTxt.is_open()) {
+        cerr << "Error: No se pudo crear el archivo TXT: " << txtPath << endl;
+        return false;
     }
-          // Inicia medición de tiempo de ejecución
-    const int BUF = 1 << 23;                     // Buffer de (16 MB)
-    char* buf = new char[BUF + 32];              // +32 bytes extra por seguridad (para números grandes)
-    int pos = 0;                              
-    DWORD written;                               // Variable para almacenar bytes escritos (requerida por WriteFile)
 
-    auto writeInt = [&](int val) {
-        if (val < 0) { buf[pos++] = '-'; val = -val; }
-        char tmp[12];
-        int len = 0;
-        do { tmp[len++] = '0' + (val % 10); val /= 10; } while (val);
-        for (int i = len - 1; i >= 0; i--) buf[pos++] = tmp[i];
-        };
+    const int BUFFER_SIZE = 10000;
+    string buffer;
+    buffer.reserve(BUFFER_SIZE * 12);
 
     for (long long i = 0; i < totalEnteros; i++) {
-        writeInt(arr.read(i));
+        int valor = arr.read(i);
+        buffer += to_string(valor);
+
         if (i < totalEnteros - 1) {
-            buf[pos++] = ',';
-            buf[pos++] = ' ';
+            buffer += ", ";
         }
-        if (pos >= BUF - 32) {
-            WriteFile(hFile, buf, (DWORD)pos, &written, NULL);
-            pos = 0;
+
+        if ((i + 1) % BUFFER_SIZE == 0 || i == totalEnteros - 1) {
+            outTxt << buffer;
+            buffer.clear();
         }
     }
 
-    buf[pos++] = '\n';                           // Añade salto de línea al final
-    WriteFile(hFile, buf, (DWORD)pos, &written, NULL);  
-    CloseHandle(hFile);                          
-    delete[] buf;                                // Libera la memoria del buffer
- 
-    return true;                                
-}
+    outTxt << "\n";
+    outTxt.close();
 
+    return true;
+}
 int main(int argc, char* argv[]) {
     string inputPath;
     string outputPath;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     }
     if (!algoritmoCorrecto(algoritmo)) {
         cerr << "Error: algoritmo no reconocido '" << algoritmo
-            << "'. Opciones: QS, SS, TS, MS, RS" << endl; return 1;
+            << "'. Opciones: QS, SS, MS, TS, RS" << endl; return 1;
     }
     if (tamanoPagina <= 0 || tamanoPagina % (int)sizeof(int) != 0) {
         cerr << "Error: pageSize debe ser positivo y multiplo de " << sizeof(int) << endl; return 1;
@@ -146,9 +146,9 @@ int main(int argc, char* argv[]) {
     try {
         if (algoritmo == "QS") sorter.quickSort(arr, 0, totalEnteros - 1);
         else if (algoritmo == "SS") sorter.shellSort(arr, 0, totalEnteros - 1);
+        else if (algoritmo == "RS") sorter.radixSort(arr, totalEnteros);
         else if (algoritmo == "TS") sorter.timSort(arr, 0, totalEnteros - 1);
-        else if (algoritmo == "MS") sorter.mergeSort(arr, 0, totalEnteros - 1);
-        else if (algoritmo == "RS") sorter.radixSort(arr, 0, totalEnteros - 1);
+        else if (algoritmo == "MS") sorter.mergeSort(arr, totalEnteros);
     }
     catch (const exception& e) {
         cerr << "Error durante ordenamiento: " << e.what() << endl; return 1;

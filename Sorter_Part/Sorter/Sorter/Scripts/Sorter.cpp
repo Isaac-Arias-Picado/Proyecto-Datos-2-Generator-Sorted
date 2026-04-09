@@ -1,72 +1,113 @@
 #include "../Interfaces/Sorter.h"
 #include "../Interfaces/PagedArray.h"
-#include <algorithm>
 #include <climits>
-#include <cstring>
+#include <cstdio>
 
 using namespace std;
 
-void Sorter::quickSort(PagedArray& arr, int left, int right) {
-    if (left >= right) return;
+int partitionHoare(PagedArray& arr, int low, int high) {
+    // Elegir pivote (mediana de tres para mejor rendimiento)
+    int mid = low + (high - low) / 2;
 
-    int i = left, j = right;
-    int pivot = arr[left + (right - left) / 2];
+    // Mediana de tres
+    int pivot;
+    int pivotIdx;
 
-    while (i <= j) {
-        while (arr[i] < pivot) i++;
-        while (arr[j] > pivot) j--;
-        if (i <= j) {
-            swap(arr[i], arr[j]);
+    int a = arr[low];
+    int b = arr[mid];
+    int c = arr[high];
+
+    if ((a - b) * (c - a) >= 0) {
+        pivot = a;
+        pivotIdx = low;
+    }
+    else if ((b - a) * (c - b) >= 0) {
+        pivot = b;
+        pivotIdx = mid;
+    }
+    else {
+        pivot = c;
+        pivotIdx = high;
+    }
+
+    // Mover pivote al inicio
+    if (pivotIdx != low) {
+        int temp = arr[low];
+        arr[low] = arr[pivotIdx];
+        arr[pivotIdx] = temp;
+    }
+
+    // Partición Hoare
+    int i = low + 1;
+    int j = high;
+
+    while (true) {
+        // Mover i hacia la derecha mientras arr[i] <= pivot
+        while (i <= high && arr[i] < pivot) {
             i++;
+        }
+
+        // Mover j hacia la izquierda mientras arr[j] > pivot
+        while (j > low && arr[j] >= pivot) {
             j--;
         }
-    }
 
-    if (left < j) quickSort(arr, left, j);
-    if (i < right) quickSort(arr, i, right);
-}
-
-void Sorter::shellSort(PagedArray& arr, int left, int right) {
-    int n = right - left + 1;
-
-    static const int ciuraBase[] = { 1, 4, 10, 23, 57, 132, 301, 701 };
-    const int numBase = sizeof(ciuraBase) / sizeof(ciuraBase[0]);
-
-    int gaps[64];
-    int numGaps = 0;
-
-    for (int k = 0; k < numBase; k++) {
-        gaps[numGaps++] = ciuraBase[k];
-    }
-    while (true) {
-        long long next = (long long)gaps[numGaps - 1] * 9 / 4; 
-        if (next >= n || numGaps >= 64) break;
-        gaps[numGaps++] = (int)next;
-    }
-
-    int startGap = -1;
-    for (int k = numGaps - 1; k >= 0; k--) {
-        if (gaps[k] < n) {
-            startGap = k;
+        if (i >= j) {
             break;
         }
+
+        // Intercambiar elementos
+        int temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+
+        i++;
+        j--;
     }
 
-    if (startGap == -1) startGap = 0; 
+    // Colocar pivote en su posición final
+    int temp = arr[low];
+    arr[low] = arr[j];
+    arr[j] = temp;
 
-    for (int k = startGap; k >= 0; k--) {
-        int gap = gaps[k];
+    return j;
+}
+
+void Sorter::quickSort(PagedArray& arr, int left, int right) {
+    if (left < right) {
+        int pivotIdx = partitionHoare(arr, left, right);
+        quickSort(arr, left, pivotIdx - 1);  
+        quickSort(arr, pivotIdx + 1, right);
+    }
+}
+//shell
+void Sorter::shellSort(PagedArray& arr, int left, int right) {
+    int n = right - left + 1;
+    static const int ciura[] = {
+        1, 4, 10, 23, 57, 132, 301, 701, 1750, 3937, 8858, 19930,
+        44842, 100894, 227011, 510774, 1149241, 2585792, 5818032,
+        13090572, 29453787, 66271020, 149109795, 335497038, 754868335,
+        1698453753
+    };
+    const int numGaps = sizeof(ciura) / sizeof(ciura[0]);
+    int gaps[32], ng = 0;
+    for (int k = 0; k < numGaps; k++)
+        if (ciura[k] < n) gaps[ng++] = ciura[k];
+
+    for (int idx = ng - 1; idx >= 0; idx--) {
+        int gap = gaps[idx];
         for (int i = left + gap; i <= right; i++) {
             int temp = arr[i];
-            int j;
-            for (j = i; j >= left + gap && arr[j - gap] > temp; j -= gap) {
+            int j = i;
+            while (j >= left + gap && arr[j - gap] > temp) {
                 arr[j] = arr[j - gap];
+                j -= gap;
             }
             arr[j] = temp;
         }
     }
 }
-
+//timsor
 void Sorter::timInsertionSort(PagedArray& arr, int left, int right) {
     for (int i = left + 1; i <= right; i++) {
         int key = arr[i];
@@ -80,144 +121,144 @@ void Sorter::timInsertionSort(PagedArray& arr, int left, int right) {
 }
 
 void Sorter::timMerge(PagedArray& arr, int left, int mid, int right) {
-    int len1 = mid - left + 1;
-    int len2 = right - mid;
+    const int BUFFER_SIZE = 4096; // fijo, no crece
+    int buffer[BUFFER_SIZE];
 
-    int* leftArr = new int[len1];
-    int* rightArr = new int[len2];
+    int i = left;
+    int j = mid + 1;
+    int k = left;
 
-    for (int i = 0; i < len1; i++) leftArr[i] = arr[left + i];
-    for (int i = 0; i < len2; i++) rightArr[i] = arr[mid + 1 + i];
+    while (i <= mid || j <= right) {
+        // Llenar buffer desde el lado izquierdo
+        int count = 0;
+        while (count < BUFFER_SIZE && i <= mid) {
+            buffer[count++] = arr[i++];
+        }
 
-    int i = 0, j = 0, k = left;
-    while (i < len1 && j < len2) {
-        if (leftArr[i] <= rightArr[j]) arr[k++] = leftArr[i++];
-        else                           arr[k++] = rightArr[j++];
+        // Merge del buffer con el lado derecho, escribiendo desde k
+        int bufIdx = 0;
+        while (bufIdx < count && j <= right) {
+            if (buffer[bufIdx] <= arr[j]) {
+                arr[k++] = buffer[bufIdx++];
+            }
+            else {
+                arr[k++] = arr[j++];
+            }
+        }
+
+        // Vaciar lo que quede del buffer
+        while (bufIdx < count) {
+            arr[k++] = buffer[bufIdx++];
+        }
     }
-    while (i < len1) arr[k++] = leftArr[i++];
-    while (j < len2) arr[k++] = rightArr[j++];
-
-    delete[] leftArr;
-    delete[] rightArr;
 }
-
 void Sorter::timSort(PagedArray& arr, int left, int right) {
     int n = right - left + 1;
+    const int RUN = 128;
 
-    const int RUN = 32;
-
+    // Insertion sort para runs pequeños
     for (int i = left; i <= right; i += RUN) {
-        int runRight = min(i + RUN - 1, right);
-        timInsertionSort(arr, i, runRight);
-    }
-
-    for (int size = RUN; size < n; size *= 2) {
-        for (int i = left; i <= right; i += 2 * size) {
-            int mid = min(i + size - 1, right);
-            int runRight = min(i + 2 * size - 1, right);
-
-            if (mid < runRight) {
-                timMerge(arr, i, mid, runRight);
-            }
+        if (i + RUN - 1 - right < 0) {
+            timInsertionSort(arr, i, i + RUN - 1);
+        }
+        else
+        {
+            timInsertionSort(arr, i, right);
         }
     }
+
+    quickSort(arr, left, right);
+}
+//Merge Sort
+void Sorter::mergeHelper(PagedArray& arr, int left, int mid, int right,
+    PagedArray& aux) {
+    // Copia el rango completo al auxiliar
+    for (int i = left; i <= right; i++)
+        aux[i] = arr[i];
+
+    int i = left, j = mid + 1, k = left;
+    while (i <= mid && j <= right)
+        arr[k++] = (aux[i] <= aux[j]) ? aux[i++] : aux[j++];
+    while (i <= mid)
+        arr[k++] = aux[i++];
+    while (j <= right)
+        arr[k++] = aux[j++];
+    // Si j sobra, ya están en su lugar en arr
 }
 
-void Sorter::mergeHelper(PagedArray& arr, int left, int mid, int right) {
-    int len1 = mid - left + 1;
-    int len2 = right - mid;
-
-    int* leftArr = new int[len1];
-    int* rightArr = new int[len2];
-
-    for (int i = 0; i < len1; i++) leftArr[i] = arr[left + i];
-    for (int i = 0; i < len2; i++) rightArr[i] = arr[mid + 1 + i];
-
-    int i = 0, j = 0, k = left;
-    while (i < len1 && j < len2) {
-        if (leftArr[i] <= rightArr[j]) arr[k++] = leftArr[i++];
-        else arr[k++] = rightArr[j++];
-    }
-    while (i < len1) arr[k++] = leftArr[i++];
-    while (j < len2) arr[k++] = rightArr[j++];
-
-    delete[] leftArr;
-    delete[] rightArr;
-}
-
-void Sorter::mergeSort(PagedArray& arr, int left, int right) {
+void Sorter::mergeSortRec(PagedArray& arr, int left, int right, PagedArray& aux) {
     if (left >= right) return;
-
     int mid = left + (right - left) / 2;
-    mergeSort(arr, left, mid);
-    mergeSort(arr, mid + 1, right);
-    mergeHelper(arr, left, mid, right);
+    mergeSortRec(arr, left, mid, aux);
+    mergeSortRec(arr, mid + 1, right, aux);
+    mergeHelper(arr, left, mid, right, aux);
 }
 
-void Sorter::radixSort(PagedArray& arr, int left, int right) {
-    int n = right - left + 1;
-    if (n <= 1) return;
+void Sorter::mergeSort(PagedArray& arr, int size) {
+    string pathTemp = "temp_merge.bin";
 
-    const int BASE = 256;       
-    const int PASSES = 4;       
+    ofstream tempFile(pathTemp, ios::binary);
+    int cero = 0;
+    for (int i = 0; i < size; i++)
+        tempFile.write((char*)&cero, sizeof(int));
+    tempFile.close();
 
-    int* output = new int[n];
-
-    for (int i = 0; i < n; i++) {
-        output[i] = arr[left + i];
+    {
+        PagedArray aux(pathTemp, 4 * 1024 * 1024, 256);
+        mergeSortRec(arr, 0, size - 1, aux);
     }
 
-    int* src = output;
-    int* dst = new int[n];
+    if (remove(pathTemp.c_str()) != 0)
+        perror("Error al eliminar el archivo temporal");
+}
 
-    for (int pass = 0; pass < PASSES; pass++) {
-        int count[BASE] = { 0 };
-        int shift = pass * 8;
 
-        for (int i = 0; i < n; i++) {
-            unsigned int val = (unsigned int)src[i];
-            int byte = (val >> shift) & 0xFF;
-            count[byte]++;
-        }
+//Radix Sort
+void Sorter::countingSort(PagedArray& array, PagedArray& output, int size, int shift) {
+    const int BASE = 256;
+    int count[BASE] = { 0 };
 
-        if (pass == PASSES - 1) {          
-            int prefixSum = 0;
-
-            for (int b = 128; b < BASE; b++) {
-                int c = count[b];
-                count[b] = prefixSum;
-                prefixSum += c;
-            }
-            for (int b = 0; b < 128; b++) {
-                int c = count[b];
-                count[b] = prefixSum;
-                prefixSum += c;
-            }
-        }
-        else {
-            int prefixSum = 0;
-            for (int b = 0; b < BASE; b++) {
-                int c = count[b];
-                count[b] = prefixSum;
-                prefixSum += c;
-            }
-        }
-
-        for (int i = 0; i < n; i++) {
-            unsigned int val = (unsigned int)src[i];
-            int byte = (val >> shift) & 0xFF;
-            dst[count[byte]++] = src[i];
-        }
-
-        int* tmp = src;
-        src = dst;
-        dst = tmp;
+    for (int i = 0; i < size; i++) {
+        int byte = ((unsigned int)array[i] >> shift) & 0xFF;
+        count[byte]++;
     }
 
-    for (int i = 0; i < n; i++) {
-        arr[left + i] = src[i];
+    int acumulado = 0;
+    for (int i = 0; i < BASE; i++) {
+        int temp = count[i];
+        count[i] = acumulado;
+        acumulado += temp;
     }
 
-    delete[] output;
-    delete[] dst;
+    for (int i = 0; i < size; i++) {
+        int byte = ((unsigned int)array[i] >> shift) & 0xFF;
+        output[count[byte]++] = array[i];
+    }
+}
+
+void Sorter::radixSort(PagedArray& array, int size) {
+    string pathTemp = "temp_radix.bin";
+
+    ofstream tempFile(pathTemp, ios::binary);
+    int cero = 0;
+    for (int i = 0; i < size; i++) {
+        tempFile.write((char*)&cero, sizeof(int));
+    }
+    tempFile.close(); 
+
+    {
+        PagedArray aux(pathTemp, 4 * 1024 * 1024, 256);
+
+        for (int shift = 0; shift < 32; shift += 8) {
+            countingSort(array, aux, size, shift);
+
+            for (int i = 0; i < size; i++) {
+                array[i] = aux[i];
+            }
+        }
+    } 
+
+    if (remove(pathTemp.c_str()) != 0) {
+        perror("Error al eliminar el archivo temporal");
+    }
 }

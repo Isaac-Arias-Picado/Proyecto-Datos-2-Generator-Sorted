@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
             out.close();
 			auto fin = std::chrono::high_resolution_clock::now(); //cronometra el fin
             auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(fin - inicio);
-            cout << "Generacion completada" << duracion.count() << endl;
+            cout << "Generacion completada: " << duracion.count() << " ms" << endl;
         }
         else {
             cout << "Error: No se pudo crear el archivo " << outputPath << endl;
