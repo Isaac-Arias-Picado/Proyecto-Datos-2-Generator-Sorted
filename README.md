@@ -16,16 +16,16 @@ Autor: Isaac Arias Picado
 
 ### Generador
 ```powershell
-.\generator.exe -size <SIZE> -output <RUTA>
+.\Generator.exe -size <SIZE> -output <RUTA>
 ```
 `<SIZE>`: `SMALL` (256 MB), `MEDIUM` (512 MB), `LARGE` (1 GB)
 ```powershell
-.\generator.exe -size SMALL -output datos.bin
+.\Generator.exe -size SMALL -output datos.bin
 ```
 
 ### Ordenador
 ```powershell
-.\sorter.exe -input <ENTRADA> -output <SALIDA> -alg <ALG> -pageSize <BYTES> -pageCount <N>
+.\Sorter.exe -input <ENTRADA> -output <SALIDA> -alg <ALG> -pageSize <BYTES> -pageCount <N>
 ```
 
 | `-alg` | Algoritmo |
@@ -36,7 +36,7 @@ Autor: Isaac Arias Picado
 | `RS` | Radix Sort |
 | `SS` | Shell Sort |
 ```powershell
-.\sorter.exe -input datos.bin -output ordenado -alg RS -pageSize 16384 -pageCount 512
+.\Sorter.exe -input datos.bin -output ordenado -alg RS -pageSize 16384 -pageCount 512
 ```
 
 Genera `ordenado.bin` (binario) y `ordenado.txt` (legible con comas).
