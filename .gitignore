@@ -1,0 +1,50 @@
+# Visual Studio
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.slnx
+*.user
+*.suo
+*.suo
+*.cache
+*.obj
+*.exe
+*.dll
+*.lib
+
+# Carpetas de compilación
+x64/
+Debug/
+Release/
+Win32/
+.vs/
+ipch/
+
+# Archivos binarios del proyecto
+*.bin
+*.dat
+
+# Archivos de salida del sorter
+*.txt
+
+# Archivos temporales
+UpgradeLog*.htm
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Archivos objeto
+*.o
+*.obj
+
+# Carpetas de build
+build/
+bin/
+obj/
+
+# Backups
+*.bak
+*.backup
+~$*
