@@ -15,9 +15,11 @@ int main(int argc, char* argv[]) {
         if (arg == "-size" && i + 1 < argc) sizeParam = argv[++i];
         else if (arg == "-output" && i + 1 < argc) outputPath = argv[++i];
     }
-
+    if(outputPath.empty()) {
+        cout << "Error: Use -size para generar." << endl;
+        return 1;
+    }
     if (!sizeParam.empty()) {
-        if (outputPath.empty()) outputPath = "datos_generados.bin";
         if (outputPath.find(".bin") == string::npos) {
             outputPath += ".bin";
         }
