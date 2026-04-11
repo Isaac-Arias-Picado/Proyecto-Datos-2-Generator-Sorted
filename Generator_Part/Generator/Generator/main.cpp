@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
         else if (arg == "-output" && i + 1 < argc) outputPath = argv[++i];
     }
     if(outputPath.empty()) {
-        cout << "Error: Use -size para generar." << endl;
+        cout << "Error: Use -output para designar salida." << endl;
         return 1;
     }
     if (!sizeParam.empty()) {
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
         return 0; 
     }
 
-    cout << "Error: Use -size para generar." << endl;
+    cout << "Error: Use -size para generar (SMALL, MEDIUM, LARGE)." << endl;
     return 1;
 }
 
