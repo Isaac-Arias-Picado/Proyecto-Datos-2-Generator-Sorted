@@ -28,8 +28,12 @@
 #include <iostream>
 #include <cstring>
 
-using namespace std;
-
+int min(int a, int b) {
+    if (a < b)
+        return a;
+    else
+        return b;
+}
 static int log2i(int n) { //busca cual es el 2^s mas cercano a n
     int s = 0;
 	while (n > 1) { s++; n >>= 1; } // es una division entera pero mas eficiente que n = n/2
@@ -41,22 +45,22 @@ PagedArray::PagedArray(const std::string& fname, int pSize, int pCount)
     pageFaults(0), pageHits(0), fileSizeBytes(0), totalInts(0),
     totalPages(0), fifoCounter(0), pageTableSize(0)
 {
-	file.open(filename, ios::binary | ios::in | ios::out);  //abre el archivo en modo binario para lectura y escritura
+	file.open(filename, std::ios::binary | std::ios::in | std::ios::out);  //abre el archivo en modo binario para lectura y escritura
     if (!file.is_open()) {
-        cerr << "Error: No se pudo abrir " << filename << endl;
+        std::cerr << "Error: No se pudo abrir " << filename << std::endl;
         exit(1);
     }
 
-	file.seekg(0, ios::end); //mueve el puntero al final del archivo para obtener su tamaño
+	file.seekg(0, std::ios::end); //mueve el puntero al final del archivo para obtener su tamaño
 	fileSizeBytes = static_cast<long long>(file.tellg()); //obtiene el tamaño del archivo en bytes
-	file.seekg(0, ios::beg); //mueve el puntero al inicio del archivo para futuras operaciones de lectura/escritura
+	file.seekg(0, std::ios::beg); //mueve el puntero al inicio del archivo para futuras operaciones de lectura/escritura
 
     if (fileSizeBytes <= 0) {
-        cerr << "Error: Archivo vacio" << endl;
+        std::cerr << "Error: Archivo vacio" << std::endl;
         exit(1);
     }
     if (pageSize % (int)sizeof(int) != 0) {
-        cerr << "Error: pageSize no es multiplo de sizeof(int)" << endl;
+        std::cerr << "Error: pageSize no es multiplo de sizeof(int)" << std::endl;
         exit(1);
     }
 
@@ -122,7 +126,7 @@ void PagedArray::loadPage(int pageNumber, int slot) {
     long long pos = (long long)pageNumber * pageSize;
     int       bytesToRead = (int)min((long long)pageSize, fileSizeBytes - pos);
 
-    file.seekg((streampos)pos); 
+    file.seekg((std::streampos)pos); 
     file.read(reinterpret_cast<char*>(memoryPages[slot].data), bytesToRead);
 	if (file.eof()) file.clear(); //limpia el estado de EOF para futuras operaciones
 
@@ -145,7 +149,7 @@ void PagedArray::savePage(int slot) {
 	long long pos = (long long)pageNum * pageSize; //calcula la posicion en bytes del inicio de la pagina en el archivo
     int       bytesToWrite = (int)min((long long)pageSize, fileSizeBytes - pos); 
 
-	file.seekp((streampos)pos); //mueve el puntero de escritura a la posicion calculada
+	file.seekp((std::streampos)pos); //mueve el puntero de escritura a la posicion calculada
 	file.write(reinterpret_cast<char*>(memoryPages[slot].data), bytesToWrite); //escribe los datos de la pagina en el archivo
 	memoryPages[slot].modified = false; //marca la pagina como no modificada ya que los cambios se han guardado en el archivo
 }

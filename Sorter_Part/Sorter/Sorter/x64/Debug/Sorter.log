@@ -1,6 +1,8 @@
 ﻿  PagedArray.cpp
+C:\Users\Isaac\P1_Datos_II\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\Sorter\Scripts\PagedArray.cpp(127,73): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
+C:\Users\Isaac\P1_Datos_II\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\Sorter\Scripts\PagedArray.cpp(150,74): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
   main.cpp
-C:\Users\Isaac\P1_datos_Github\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\Sorter\main.cpp(65,27): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
+C:\Users\Isaac\P1_Datos_II\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\Sorter\main.cpp(55,30): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data
   Sorter.cpp
   Generating Code...
-  Sorter.vcxproj -> C:\Users\Isaac\P1_datos_Github\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\x64\Debug\Sorter.exe
+  Sorter.vcxproj -> C:\Users\Isaac\P1_Datos_II\Proyecto-Datos-2-Generator-Sorted\Sorter_Part\Sorter\x64\Debug\Sorter.exe
