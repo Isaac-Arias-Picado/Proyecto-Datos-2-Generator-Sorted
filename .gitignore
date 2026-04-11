@@ -2,8 +2,6 @@
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
-*.sln
-*.slnx
 *.user
 *.suo
 *.suo
