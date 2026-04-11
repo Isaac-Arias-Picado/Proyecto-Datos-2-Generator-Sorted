@@ -1,16 +1,3 @@
-# Visual Studio
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.user
-*.suo
-*.suo
-*.cache
-*.obj
-*.exe
-*.dll
-*.lib
-
 # Carpetas de compilación
 x64/
 Debug/
